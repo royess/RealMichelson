@@ -1,6 +1,18 @@
 import math
 import numpy as np
 
+'''
+class pointSource:
+    def __init__(self, position, color):
+        self.position = np.array(position)
+        self.color = np.array(color)
+
+class mirror:
+    def __init__(self, central_position, direction):
+        self.position = np.array(central_position)
+        self.direction = np.array(direction)
+'''
+
 # Our axis is: 
 # [0, 0, 0] = origin = center of mirror_G
 # [1, 0, 0] = x-direction = mirror_G to mirror_M2
@@ -88,11 +100,11 @@ class MichelsonSimulation:
     
     # change to local interference mode, together with infinite-distance-screen
     # we only consider the relative position between screen and lens(i.e. our eyes)
-    # thus we set lens as [0, 0, 0], the relative distance is 0.5cm
+    # thus we set lens as [0, 0, 0], the relative distance is 2cm
     def changeTo_local(self):
         self.islocalInterference = True
-        screen = []                         # here initialize screen, 100*100 points, 5cm*5cm
-        center = np.array([0, -0.5, 0])
+        screen = []                         # here initialize screen, 100*100 points, 2cm*2cm
+        center = np.array([0, -2, 0])
         for i in range(-50, 50):
             for j in range(-50, 50):
                 point = center + np.array([2 * i / 100, 0, 2 * j /100])
@@ -108,6 +120,7 @@ class MichelsonSimulation:
     
     def get_screen(self):
         return self.screen
+
     
     # This is the mirror symmetry operation acting on a point source.
     # mirror = [np.array(central position), np.array(direction)]
@@ -168,7 +181,8 @@ class MichelsonSimulation:
                     # calculate interval between source and screen straightly, using them to derive phase difference
                     interval1 = self.get_interval(point1, point)
                     interval2 = self.get_interval(point2, point)
-                    delta = 2 * math.pi * (interval1 - interval2) / wavelength  # derive phase differnce
+                    delta = (10 ** 7) * 2 * math.pi * (interval1 - interval2) \
+                                / wavelength    # derive phase differnce, wavelength is in nm=10^{-7}cm
 
                     intensity1 = 1/(interval1 ** 2)
                     intensity2 = 1/(interval2 ** 2)
@@ -195,7 +209,8 @@ class MichelsonSimulation:
                     # we follow screenPoint-lightDirection-phaseDifference calculation, 
                     # type(point) == np.ndarray, and the term denotes relative distance.
                     direction = np.array(point)
-                    delta = 2 * math.pi * np.inner(intervalVector, direction) / np.linalg.norm(direction)
+                    delta = (10 ** 7) * 2 * math.pi * np.inner(intervalVector, direction) / np.linalg.norm(direction) \
+                                / wavelength     # derive phase differnce, wavelength is in nm=10^{-7}cm
 
                     intensity = 2 + 2 * math.cos(delta)
                     pattern.append([point, wavelength, intensity])              # forming one term, not interfere with others

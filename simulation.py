@@ -1,23 +1,13 @@
 import math
 import numpy as np
 
-'''
-class pointSource:
-    def __init__(self, position, color):
-        self.position = np.array(position)
-        self.color = np.array(color)
-
-class mirror:
-    def __init__(self, central_position, direction):
-        self.position = np.array(central_position)
-        self.direction = np.array(direction)
-'''
-
 # Our axis is: 
 # [0, 0, 0] = origin = center of mirror_G
 # [1, 0, 0] = x-direction = mirror_G to mirror_M2
 # [0, 1, 0] = y-direction = mirror_G to mirror_M1
 # [0, 0, 1] = z-direction, obeying verter product rule
+
+spec_wavelengths = np.arange(380, 781, 5)
 
 class MichelsonSimulation:
     # We have a list of point-source, each with its position and wavelength information.
@@ -34,21 +24,23 @@ class MichelsonSimulation:
         self.screen = []
     
     # insert a list of source information, including its position and wavelength
-    def insertSource(self, source_position, wavelength):
+    def insertSource(self, source_position, wavelength, source_intensity=1):
         position = np.array(source_position)
-        self.source_list.append([position, wavelength])
-    
-    # delete a point source, using its position information
-    def deleteSource(self, position):
-        positionVector = np.array(position)
-        source_list = self.source_list
-        self.source_list = [x for x in source_list if not (x[0]==positionVector).all()]
+        self.source_list.append([position, wavelength, source_intensity])
+        
+    # include a light source of compound light 
+    def insertSpecSource(self, source_position, spec):
+        position = np.array(source_position)
+        
+        for wavelength, source_intensity in zip(spec_wavelengths, spec):
+            self.source_list.append([position, wavelength, source_intensity])
+
     
     # clear all the point sources
     def clearSource(self):
         self.source_list.clear()
     
-    def get_SourceList(self):
+    def getSourceList(self):
         return self.source_list
     
     # initialize information of central mirror —— G, input '[...], [...]'
@@ -155,8 +147,7 @@ class MichelsonSimulation:
         source_list = self.source_list
         image_list = []
         for source in source_list:
-            wavelength = source[1]           # get information of wavelength
-            position_S = source[0]
+            position_S, wavelength, source_intensity = source
             
             # get position of S1
             position_S1 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_G), self.mirror_M1)
@@ -164,7 +155,7 @@ class MichelsonSimulation:
             # get position of S2
             position_S2 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_M2), self.mirror_G)
             
-            image_list.append([position_S1, position_S2, wavelength])  # generate coherent light source unit
+            image_list.append([position_S1, position_S2, wavelength, source_intensity])  # generate coherent light source unit
         return image_list
     
     # get interval between two vector, supporting both type(list) and type(np.ndarray)
@@ -186,7 +177,7 @@ class MichelsonSimulation:
             pattern = []
             for point in screen:
                 for coherentSource in image_list:         # calculate for each source-screenPoint combination
-                    point1, point2, wavelength = coherentSource
+                    point1, point2, wavelength, source_intensity = coherentSource
 
                     # calculate interval between source and screen straightly, using them to derive phase difference
                     interval1 = self.getInterval(point1, point)
@@ -198,7 +189,7 @@ class MichelsonSimulation:
                     intensity2 = 1/(interval2 ** 2)
                     intensity = intensity1 + intensity2 + \
                                 2 * math.sqrt(intensity1 * intensity2) * math.cos(delta)
-                    pattern.append([point, wavelength, intensity])              # forming one term, not interfere with others
+                    pattern.append([point, wavelength, intensity*source_intensity])              # forming one term, not interfere with others
             return pattern
         else:
             raise Exception('Mode is local interference now, please change mode')
@@ -212,7 +203,7 @@ class MichelsonSimulation:
             pattern = []
             for point in screen:
                 for coherentSource in image_list:         # calculate for each source-screenPoint combination
-                    point1, point2, wavelength = coherentSource
+                    point1, point2, wavelength, source_intensity = coherentSource
                     intervalVector = point1 - point2      # derive vector from one coherent image source to the other
 
                     # since specified screenPoint gives a pair of parallel light, 
@@ -223,7 +214,8 @@ class MichelsonSimulation:
                                 / wavelength     # derive phase differnce, wavelength is in nm=10^{-7}cm
 
                     intensity = 2 + 2 * math.cos(delta)
-                    pattern.append([point, wavelength, intensity])              # forming one term, not interfere with others
+                    pattern.append([point, wavelength, intensity*source_intensity])              # forming one term, not interfere with others
             return pattern
         else:
             raise Exception('Mode is nonlocal interference now, please change mode')
+            

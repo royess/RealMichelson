@@ -52,43 +52,53 @@ class MichelsonSimulation:
         return self.source_list
     
     # initialize information of central mirror —— G, input '[...], [...]'
-    def initialmirror_G(self, mirror_G_position, mirror_G_direction):
+    def initialMirrorG(self, mirror_G_position, mirror_G_direction):
         position = np.array(mirror_G_position)
         direction = np.array(mirror_G_direction)
         self.mirror_G.append(position)
         self.mirror_G.append(direction)
     
     # initialize information of mirror M1 (the type is [np.array, np.array])
-    def initialmirror_M1(self, mirror_M1_position, mirror_M1_direction):
+    def initialMirrorM1(self, mirror_M1_position, mirror_M1_direction):
         position = np.array(mirror_M1_position)
         direction = np.array(mirror_M1_direction)
         self.mirror_M1.append(position)
         self.mirror_M1.append(direction)
     
     # initialize information of mirror M2 (the type is [np.array, np.array])
-    def initialmirror_M2(self, mirror_M2_position, mirror_M2_direction):
+    def initialMirrorM2(self, mirror_M2_position, mirror_M2_direction):
         position = np.array(mirror_M2_position)
         direction = np.array(mirror_M2_direction)
         self.mirror_M2.append(position)
         self.mirror_M2.append(direction)
+        
+    # set M1 mirror(i.e. set its central point)
+    def setMirrorM1(self, loc):
+        locVector = np.array(loc)
+        self.mirror_M1[0] = locVector
+    
+    # set M2 mirror(i.e. set its direction)
+    def setMirrorM2(self, direction):
+        directionVector = np.array(direction)
+        self.mirror_M2[1] = directionVector
     
     # move M1 mirror(i.e. move its central point)
-    def movemirror_M1(self, movement):
+    def moveMirrorM1(self, movement):
         movementVector = np.array(movement)
         self.mirror_M1[0] += movementVector
     
     # move M2 mirror(i.e. change its direction)
-    def movemirror_M2(self, directionChange):
+    def moveMirrorM2(self, directionChange):
         directionVector = np.array(directionChange)
         self.mirror_M2[1] += directionVector
     
-    def get_mirror(self):
+    def getMirror(self):
         G, M1, M2 = self.mirror_G, self.mirror_M1, self.mirror_M2
         return 'G', G, 'M1', M1, 'M2', M2
     
     # change to non-local interference mode, together with finite-distance-screen
     # we set distance from mirror_G to screen is 30cm
-    def changeTo_nonlocal(self):
+    def changeToNonlocal(self):
         self.islocalInterference = False
         screen = []                         # here initialize screen, 100*100 points, 5cm*5cm
         center = np.array([0, -30, 0])
@@ -101,7 +111,7 @@ class MichelsonSimulation:
     # change to local interference mode, together with infinite-distance-screen
     # we only consider the relative position between screen and lens(i.e. our eyes)
     # thus we set lens as [0, 0, 0], the relative distance is 2cm
-    def changeTo_local(self):
+    def changeToLocal(self):
         self.islocalInterference = True
         screen = []                         # here initialize screen, 100*100 points, 2cm*2cm
         center = np.array([0, -2, 0])
@@ -111,21 +121,21 @@ class MichelsonSimulation:
                 screen.append(point)
         self.screen = screen
         
-    def get_InterferenceMode(self):
+    def getInterferenceMode(self):
         mode = self.islocalInterference
         if mode:
             return 'local interference'
         else:
             return 'non-local interference'
     
-    def get_screen(self):
+    def getScreen(self):
         return self.screen
 
     
     # This is the mirror symmetry operation acting on a point source.
     # mirror = [np.array(central position), np.array(direction)]
     # source = [np.array(position), wavelength], here we just use the former
-    def mirror_operation(self, source_position, mirror):
+    def mirrorOperation(self, source_position, mirror):
         const = np.inner(mirror[1], -1 * mirror[0])                 # change a(x-x0)+b(y-y0)+c(z-z0) to ax+by+cz+d
         coe = -2 * (np.inner(mirror[1], source_position) + const) \
                 / np.inner(mirror[1], mirror[1])                    # compute the coeffient for image_coordinate calculation
@@ -141,7 +151,7 @@ class MichelsonSimulation:
     # Output an image source list, corresponding to source S, 
     # the term is like '[np.array(position of S1), np.array(position of S2), wavelength]'
     # Detailly speaking, S-mirrorG-mirrorM1-S1, S-mirrorM2-mirrorG-S2
-    def get_imageSourceList(self):
+    def getImageSourceList(self):
         source_list = self.source_list
         image_list = []
         for source in source_list:
@@ -149,16 +159,16 @@ class MichelsonSimulation:
             position_S = source[0]
             
             # get position of S1
-            position_S1 = self.mirror_operation(self.mirror_operation(position_S, self.mirror_G), self.mirror_M1)
+            position_S1 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_G), self.mirror_M1)
             
             # get position of S2
-            position_S2 = self.mirror_operation(self.mirror_operation(position_S, self.mirror_M2), self.mirror_G)
+            position_S2 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_M2), self.mirror_G)
             
             image_list.append([position_S1, position_S2, wavelength])  # generate coherent light source unit
         return image_list
     
     # get interval between two vector, supporting both type(list) and type(np.ndarray)
-    def get_interval(self, vec1, vec2):
+    def getInterval(self, vec1, vec2):
         if type(vec1) is not np.ndarray:
             vec1 = np.array(vec1)
         if type(vec2) is not np.ndarray:
@@ -171,7 +181,7 @@ class MichelsonSimulation:
     # each source-screenPoint combination, we can get final pattern by simply adding their intensity.
     def nonlocalInterference(self):
         if not self.islocalInterference:
-            image_list = self.get_imageSourceList()       # get imformation of image-source-pair
+            image_list = self.getImageSourceList()       # get imformation of image-source-pair
             screen = self.screen                          # get point list of screen
             pattern = []
             for point in screen:
@@ -179,8 +189,8 @@ class MichelsonSimulation:
                     point1, point2, wavelength = coherentSource
 
                     # calculate interval between source and screen straightly, using them to derive phase difference
-                    interval1 = self.get_interval(point1, point)
-                    interval2 = self.get_interval(point2, point)
+                    interval1 = self.getInterval(point1, point)
+                    interval2 = self.getInterval(point2, point)
                     delta = (10 ** 7) * 2 * math.pi * (interval1 - interval2) \
                                 / wavelength    # derive phase differnce, wavelength is in nm=10^{-7}cm
 
@@ -197,7 +207,7 @@ class MichelsonSimulation:
     # The output is a list, and the term is like '[position on screen, wavelength, intensity]'
     def localInterference(self):
         if self.islocalInterference:
-            image_list = self.get_imageSourceList()       # get imformation of image-source-pair
+            image_list = self.getImageSourceList()       # get imformation of image-source-pair
             screen = self.screen                          # get point list of screen
             pattern = []
             for point in screen:

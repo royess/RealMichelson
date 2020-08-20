@@ -80,7 +80,7 @@ class MichelsonSimulation:
         self.mirror_M1[0] += movementVector
     
     # move M2 mirror(i.e. change its direction)
-    def moveMirrorM2(self, directionChange):
+    def moveMirrorM2(self, directionChange): #TODO: experimentally we measure angle, not direction vector, need a converter
         directionVector = np.array(directionChange)
         self.mirror_M2[1] += directionVector
     
@@ -171,6 +171,8 @@ class MichelsonSimulation:
     # Since no interference between different source, we give an output for
     # each source-screenPoint combination, we can get final pattern by simply adding their intensity.
     def nonlocalInterference(self):
+        enhance_factor = 1e3
+
         if not self.islocalInterference:
             image_list = self.getImageSourceList()       # get imformation of image-source-pair
             screen = self.screen                          # get point list of screen
@@ -189,7 +191,7 @@ class MichelsonSimulation:
                     intensity2 = 1/(interval2 ** 2)
                     intensity = intensity1 + intensity2 + \
                                 2 * math.sqrt(intensity1 * intensity2) * math.cos(delta)
-                    pattern.append([point, wavelength, intensity*source_intensity])              # forming one term, not interfere with others
+                    pattern.append([point, wavelength, intensity*source_intensity*enhance_factor])              # forming one term, not interfere with others
             return pattern
         else:
             raise Exception('Mode is local interference now, please change mode')

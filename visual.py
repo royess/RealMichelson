@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from colour_system import cs_hdtv
 from simulation import spec_wavelengths
 
-cs = cs_hdtv
 
 '''
     This function calculates RGB map from simulation pattern on varied wavelengths
@@ -17,14 +16,14 @@ def RGBConverter(pattern):
     wavelength_arr = np.array([entry[1] for entry in pattern]).reshape(100,100,-1)[0,0,:]
     intensity_arr = np.array([entry[2] for entry in pattern]).reshape(100,100,-1)
     
-    spec_map = np.ndarray((100,100,np.size(spec_wavelengths)))
+    spec_map = np.zeros((100,100,np.size(spec_wavelengths)))
     
     for i in range(np.size(wavelength_arr)):
         idx = int((wavelength_arr[i]-380)/5)
         if 0<=idx<np.size(spec_wavelengths):
             spec_map[:,:,idx] += intensity_arr[:,:,i]
         
-    return np.apply_along_axis(cs.spec_to_rgb, axis=2, arr=spec_map)
+    return np.apply_along_axis(cs_hdtv.spec_to_rgb, axis=2, arr=spec_map)
 
 def showPattern(ax, simulation, is_colored=False):
     if simulation.islocalInterference:

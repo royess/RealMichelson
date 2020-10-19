@@ -1,4 +1,4 @@
-# colour_system.py
+# modified from colour_system.py by christian, from https://scipython.com/blog/converting-a-spectrum-to-a-colour/
 import numpy as np
 
 def xyz_from_xy(x, y):

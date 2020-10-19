@@ -25,13 +25,13 @@ class MichelsonSimulation:
     
     # insert a list of source information, including its spatialCorrelation, position, wavelength and intensity
     # if local correlation is necessary, change islocalCorrelate=True
-    def insertSource(self, islocalCorrelate=False, source_position, wavelength, source_intensity=1):
+    def insertSource(self, source_position, wavelength, islocalCorrelate=False, source_intensity=1):
         position = np.array(source_position)
         self.source_list.append([islocalCorrelate, position, wavelength, source_intensity])
         
     # include a light source of compound light
     # if local correlation is necessary, change islocalCorrelate=True
-    def insertSpecSource(self, islocalCorrelate=False, source_position, spec):
+    def insertSpecSource(self, source_position, spec, islocalCorrelate=False):
         position = np.array(source_position)
         
         for wavelength, source_intensity in zip(spec_wavelengths, spec):
@@ -270,7 +270,7 @@ class MichelsonSimulation:
                     
                     # for non-correlate source (ordinary source)
                     if not islocalCorrelate:
-                        point1, point2, wavelength, source_intensity = coherentSource
+                        _, point1, point2, wavelength, source_intensity = coherentSource
                         intervalVector = point1 - point2      # derive vector from one coherent image source to the other
 
                         # since specified screenPoint gives a pair of parallel light, 
@@ -293,6 +293,8 @@ class MichelsonSimulation:
                         positionList.pop(0)
                         
                         # calculate sum of amplitude, use 2-element array
+                        print(positionList)
+                        print(positionList[0])
                         point1, source_intensity1 = positionList[0]
                         amplitude = np.array([0, 0])
                         for imagesource in positionList:

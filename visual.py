@@ -1,13 +1,9 @@
 from __future__ import unicode_literals
-import sys, os
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 from colour_system import cs_hdtv
 from simulation import spec_wavelengths
-
-progname = os.path.basename(sys.argv[0])
-progversion = "0.1"
 
 cs = cs_hdtv
 

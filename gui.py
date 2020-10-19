@@ -1,14 +1,18 @@
-# Make sure that we are using QT5
-matplotlib.use('Qt5Agg')
+import sys, os
+
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QWidget, QFormLayout, QPushButton, QLineEdit, QInputDialog
 
 import matplotlib
+matplotlib.use('Qt5Agg') # Make sure that we are using QT5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from simulation import MichelsonSimulation
 from visual import showPattern
+
+progname = os.path.basename(sys.argv[0])
+progversion = "0.1"
 
 '''
     Physical spectrual to color: using ColorPy. (http://markkness.net/colorpy/ColorPy.html)

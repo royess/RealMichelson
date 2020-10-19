@@ -23,19 +23,17 @@ class MichelsonSimulation:
         self.islocalInterference = False
         self.screen = []
     
-    # insert a list of source information, including its spatialCorrelation, position, wavelength and intensity
-    # if local correlation is necessary, change islocalCorrelate=True
-    def insertSource(self, source_position, wavelength, islocalCorrelate=False, source_intensity=1):
+    # insert a list of source information, including its position and wavelength
+    def insertSource(self, source_position, wavelength, source_intensity=1):
         position = np.array(source_position)
-        self.source_list.append([islocalCorrelate, position, wavelength, source_intensity])
+        self.source_list.append([position, wavelength, source_intensity])
         
-    # include a light source of compound light
-    # if local correlation is necessary, change islocalCorrelate=True
-    def insertSpecSource(self, source_position, spec, islocalCorrelate=False):
+    # include a light source of compound light 
+    def insertSpecSource(self, source_position, spec):
         position = np.array(source_position)
         
         for wavelength, source_intensity in zip(spec_wavelengths, spec):
-            self.source_list.append([islocalCorrelate, position, wavelength, source_intensity])
+            self.source_list.append([position, wavelength, source_intensity])
 
     
     # clear all the point sources
@@ -149,44 +147,15 @@ class MichelsonSimulation:
         source_list = self.source_list
         image_list = []
         for source in source_list:
-            islocalCorrelate, position_S, wavelength, source_intensity = source
+            position_S, wavelength, source_intensity = source
             
-            # for non-correlate source (ordinary source)
-            if not islocalCorrelate:
-                # get position of S1
-                position_S1 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_G), self.mirror_M1)
-
-                # get position of S2
-                position_S2 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_M2), self.mirror_G)
-
-                # generate coherent light source unit
-                image_list.append([islocalCorrelate, position_S1, position_S2, wavelength, source_intensity])
-            # for correlate source (i.e. with 4 correlated subsource around)
-            else:
-                # get position of 4 subsource
-                position_left = position_S - np.array([0, 0.5, 0])
-                position_right = position_S + np.array([0, 0.5, 0])
-                position_up = position_S + np.array([0, 0, 0.5])
-                position_down = position_S - np.array([0, 0, 0.5])
-                subsourcePositionList = [position_left, position_right, position_up, position_down]
-                
-                # get image source information
-                imageSource = [islocalCorrelate, wavelength]
-                # central source
-                position_S1 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_G), self.mirror_M1)
-                position_S2 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_M2), self.mirror_G)
-                imageSource.append([position_S1, source_intensity])
-                imageSource.append([position_S2, source_intensity])
-                # subsource
-                for subsourcePosition in subsourcePositionList:
-                    sub1 = self.mirrorOperation(self.mirrorOperation(subsourcePosition, self.mirror_G), self.mirror_M1)
-                    sub2 = self.mirrorOperation(self.mirrorOperation(subsourcePosition, self.mirror_M2), self.mirror_G)
-                    imageSource.append([sub1, 0.1 * source_intensity])
-                    imageSource.append([sub2, 0.1 * source_intensity])
-                
-                # generate coherent light source unit, first gives islocalCorrelate & wavelength, 
-                # then gives all related image source by '[position, intensity]'.
-                image_list.append(imageSource)
+            # get position of S1
+            position_S1 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_G), self.mirror_M1)
+            
+            # get position of S2
+            position_S2 = self.mirrorOperation(self.mirrorOperation(position_S, self.mirror_M2), self.mirror_G)
+            
+            image_list.append([position_S1, position_S2, wavelength, source_intensity])  # generate coherent light source unit
         return image_list
     
     # get interval between two vector, supporting both type(list) and type(np.ndarray)
@@ -208,50 +177,21 @@ class MichelsonSimulation:
             image_list = self.getImageSourceList()       # get imformation of image-source-pair
             screen = self.screen                          # get point list of screen
             pattern = []
-            positionList = image_list.copy()
             for point in screen:
-                for coherentSource in positionList:         # calculate for each source-screenPoint combination
-                    islocalCorrelate = coherentSource[0]
-                    
-                    # for non-correlate source (ordinary source)
-                    if not islocalCorrelate:
-                        islocalCorrelate, point1, point2, wavelength, source_intensity = coherentSource
+                for coherentSource in image_list:         # calculate for each source-screenPoint combination
+                    point1, point2, wavelength, source_intensity = coherentSource
 
-                        # calculate interval between source and screen straightly, using them to derive phase difference
-                        interval1 = self.getInterval(point1, point)
-                        interval2 = self.getInterval(point2, point)
-                        delta = (10 ** 7) * 2 * math.pi * (interval1 - interval2) \
-                                    / wavelength    # derive phase differnce, wavelength is in nm=10^{-7}cm
+                    # calculate interval between source and screen straightly, using them to derive phase difference
+                    interval1 = self.getInterval(point1, point)
+                    interval2 = self.getInterval(point2, point)
+                    delta = (10 ** 7) * 2 * math.pi * (interval1 - interval2) \
+                                / wavelength    # derive phase differnce, wavelength is in nm=10^{-7}cm
 
-                        intensity1 = 1/(interval1 ** 2)
-                        intensity2 = 1/(interval2 ** 2)
-                        intensity = intensity1 + intensity2 + \
-                                    2 * math.sqrt(intensity1 * intensity2) * math.cos(delta)
-                        # forming one term, not interfere with others
-                        pattern.append([point, wavelength, intensity*source_intensity*enhance_factor])
-                    # for correlate source (i.e. with 4 correlated subsource around)
-                    else:
-                        wavelength = coherentSource[1]
-                        
-                        # calculate sum of amplitude, use 2-element array
-                        correlatelist = coherentSource[2:]
-                        point1, source_intensity1 = correlatelist[0]
-                        interval1 = self.getInterval(point1, point)
-                        amplitude = np.array([0.0, 0.0])
-                        for imagesource in correlatelist:
-                            point2, source_intensity2 = imagesource
-                            source_amplitude = math.sqrt(source_intensity2)
-                            interval2 = self.getInterval(point2, point)
-                            delta = (10 ** 7) * 2 * math.pi * (interval1 - interval2) \
-                                    / wavelength    # derive phase differnce, wavelength is in nm=10^{-7}cm
-                            
-                            amplitude += np.array([source_amplitude * math.cos(delta), source_amplitude * math.sin(delta)])
-                        
-                        # calculate intensity
-                        intensity = np.linalg.norm(amplitude) ** 2
-                        
-                        # forming one term, not interfere with others
-                        pattern.append([point, wavelength, intensity*source_intensity1*enhance_factor])
+                    intensity1 = 1/(interval1 ** 2)
+                    intensity2 = 1/(interval2 ** 2)
+                    intensity = intensity1 + intensity2 + \
+                                2 * math.sqrt(intensity1 * intensity2) * math.cos(delta)
+                    pattern.append([point, wavelength, intensity*source_intensity*enhance_factor])              # forming one term, not interfere with others
             return pattern
         else:
             raise Exception('Mode is local interference now, please change mode')
@@ -263,54 +203,20 @@ class MichelsonSimulation:
             image_list = self.getImageSourceList()       # get imformation of image-source-pair
             screen = self.screen                          # get point list of screen
             pattern = []
-            positionList = image_list.copy()
             for point in screen:
-                for coherentSource in positionList:         # calculate for each source-screenPoint combination
-                    islocalCorrelate = coherentSource[0]
-                    
-                    # for non-correlate source (ordinary source)
-                    if not islocalCorrelate:
-                        islocalCorrelate, point1, point2, wavelength, source_intensity = coherentSource
-                        intervalVector = point1 - point2      # derive vector from one coherent image source to the other
+                for coherentSource in image_list:         # calculate for each source-screenPoint combination
+                    point1, point2, wavelength, source_intensity = coherentSource
+                    intervalVector = point1 - point2      # derive vector from one coherent image source to the other
 
-                        # since specified screenPoint gives a pair of parallel light, 
-                        # we follow screenPoint-lightDirection-phaseDifference calculation, 
-                        # type(point) == np.ndarray, and the term denotes relative distance.
-                        direction = np.array(point)
-                        delta = (10 ** 7) * 2 * math.pi * np.inner(intervalVector, direction) / np.linalg.norm(direction) \
-                                    / wavelength     # derive phase differnce, wavelength is in nm=10^{-7}cm
+                    # since specified screenPoint gives a pair of parallel light, 
+                    # we follow screenPoint-lightDirection-phaseDifference calculation, 
+                    # type(point) == np.ndarray, and the term denotes relative distance.
+                    direction = np.array(point)
+                    delta = (10 ** 7) * 2 * math.pi * np.inner(intervalVector, direction) / np.linalg.norm(direction) \
+                                / wavelength     # derive phase differnce, wavelength is in nm=10^{-7}cm
 
-                        intensity = 2 + 2 * math.cos(delta)
-                        # forming one term, not interfere with others
-                        pattern.append([point, wavelength, intensity*source_intensity])
-                    # for correlate source (i.e. with 4 correlated subsource around)
-                    else:
-                        wavelength = coherentSource[1]
-                        
-                        # calculate sum of amplitude, use 2-element array
-                        correlatelist = coherentSource[2:]
-                        point1, source_intensity1 = correlatelist[0]
-                        amplitude = np.array([0.0, 0.0])
-                        for correlate in correlatelist:
-                            point2, source_intensity2 = correlate
-                            source_amplitude = math.sqrt(source_intensity2)
-                            intervalVector = point1 - point2      # derive vector from one coherent image source to the other
-
-                            # since specified screenPoint gives a pair of parallel light, 
-                            # we follow screenPoint-lightDirection-phaseDifference calculation, 
-                            # type(point) == np.ndarray, and the term denotes relative distance.
-                            direction = np.array(point)
-                            delta = (10 ** 7) * 2 * math.pi * np.inner(intervalVector, direction) / np.linalg.norm(direction) \
-                                        / wavelength     # derive phase differnce, wavelength is in nm=10^{-7}cm
-
-                            amplitude += np.array([source_amplitude * math.cos(delta), source_amplitude * math.sin(delta)])
-
-                        # calculate intensity
-                        intensity = np.linalg.norm(amplitude) ** 2
-
-                        # forming one term, not interfere with others
-                        pattern.append([point, wavelength, intensity*source_intensity1])
+                    intensity = 2 + 2 * math.cos(delta)
+                    pattern.append([point, wavelength, intensity*source_intensity])              # forming one term, not interfere with others
             return pattern
         else:
             raise Exception('Mode is nonlocal interference now, please change mode')
-            

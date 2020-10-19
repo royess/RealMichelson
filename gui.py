@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QWidget, QFormLayout, QPushButton, QLineEdit, QInputDialog
 
 import matplotlib
-matplotlib.use('Qt5Agg') # Make sure that we are using QT5
+matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -12,31 +12,21 @@ from simulation import MichelsonSimulation
 from visual import showPattern
 
 progname = os.path.basename(sys.argv[0])
-progversion = "0.1"
 
 '''
-    Physical spectrual to color: using ColorPy. (http://markkness.net/colorpy/ColorPy.html)
-    GUI: pyqt5.
+    Illustrition for interface:
 
-    ---
-
-    The interface should be like:
-
-    ------------------------------------
-    |                |                 |
-    |     Screen     |    Components   |
-    |                |                 |
-    ------------------------------------
-    |             Control              |
-    |              Panel               |
-    ------------------------------------
+    ------------------------
+    |                      |
+    |       Screen         |
+    |                      |
+    ------------------------
+    |       Control        |
+    |        Panel         |
+    ------------------------
 
     Here, the "screen" part is for display of the interference pattern on the screen,
-    the "components" part is for display of the position and angle of each component,
-    the "control panel"part is for adjusting components.
-
-    TODO: add "components" part.
-
+    the "control panel" part is for controlling components.
 '''
 
 class MyMplCanvas(FigureCanvas):
@@ -55,6 +45,7 @@ class MyMplCanvas(FigureCanvas):
         FigureCanvas.setSizePolicy(self,
                                    QtWidgets.QSizePolicy.Expanding,
                                    QtWidgets.QSizePolicy.Expanding)
+                                   
         FigureCanvas.updateGeometry(self)
 
     def compute_initial_figure(self):
@@ -107,31 +98,23 @@ class ScreenCanvas(MyMplCanvas):
             self.draw()
 
     def changeSource(self, text):
-        if text=='White light' and len(self.simulation.source_list)==1:
-            print('switch to white')
-            self.axes.cla()
-            self.simulation.clearSource()
-            self.simulation.insertSpecSource(
-                [-20, 0, 0], np.ones_like(np.arange(380, 781, 5)) / 400)
-            showPattern(self.axes, self.simulation, self.is_colored)
-            self.draw()
-        elif text=="Mono. light" and len(self.simulation.source_list)==81:
-            self.axes.cla()
-            self.simulation.clearSource()
-            self.simulation.insertSource([-20, 0, 0], 635)
-            showPattern(self.axes, self.simulation, self.is_colored)
-            self.draw()
+        wavelenth = int(text)
+        self.axes.cla()
+        self.simulation.clearSource()
+        self.simulation.insertSource([-20, 0, 0], wavelenth)
+        showPattern(self.axes, self.simulation, self.is_colored)
+        self.draw()
 
     def changeM1(self, text):
-        x, y, z = [float(w) for w in text.split(',')]
-        self.simulation.setMirrorM1([x,y,z])
+        y = float(text)
+        self.simulation.setMirrorM1([0,y,0])
         self.axes.cla()
         showPattern(self.axes, self.simulation, self.is_colored)
         self.draw()
 
     def changeM2(self, text):
-        nx, ny, nz = [float(w) for w in text.split(',')]
-        self.simulation.setMirrorM2([nx,ny,nz])
+        ny = float(text) # small angle approx.
+        self.simulation.setMirrorM2([-1,ny,0])
         self.axes.cla()
         showPattern(self.axes, self.simulation, self.is_colored)
         self.draw()
@@ -147,58 +130,62 @@ class InputdialogDemo(QWidget):
         self.btn_loc=QPushButton("Locality?")
         self.btn_loc.clicked.connect(self.getLoc)
         self.le_loc=QLineEdit()
+        self.le_loc.setText('nonlocal')
         layout.addRow(self.btn_loc,self.le_loc)
 
-        self.btn_color=QPushButton("Colored screen?")
+        self.btn_color=QPushButton("Colored or mono. screen?")
         self.btn_color.clicked.connect(self.getColor)
         self.le_color=QLineEdit()
+        self.le_color.setText('colored')
         layout.addRow(self.btn_color,self.le_color)
 
-        self.btn_spec=QPushButton("Light source setting?")
+        self.btn_spec=QPushButton("Wavelenth in nm?")
         self.btn_spec.clicked.connect(self.getSpec)
         self.le_spec=QLineEdit()
+        self.le_spec.setText('635')
         layout.addRow(self.btn_spec,self.le_spec)
 
-        self.btn_M1=QPushButton("M1 central point:")
+        self.btn_M1=QPushButton("M1 location:")
         self.btn_M1.clicked.connect(self.getM1)
         self.le_M1=QLineEdit()
+        self.le_M1.setText('100')
         layout.addRow(self.btn_M1,self.le_M1)
 
-        self.btn_M2=QPushButton("M2 normal vector:")
+        self.btn_M2=QPushButton("M2 angle:")
         self.btn_M2.clicked.connect(self.getM2)
         self.le_M2=QLineEdit()
+        self.le_M2.setText('1e-3')
         layout.addRow(self.btn_M2,self.le_M2)
 
         self.setLayout(layout)
         self.setWindowTitle("Input Dialog例子")
 
     def getLoc(self):
-        items=("local","nonlocal")
-        item,ok=QInputDialog.getItem(self,"select Input dialog","Interference type?",items,0,False)
+        items = ("local","nonlocal")
+        item, ok = QInputDialog.getItem(self,"select Input dialog","Interference type?",items,0,False)
         if ok and item:
             self.le_loc.setText(item)
 
     def getColor(self):
         items=("colored","mono")
-        item,ok=QInputDialog.getItem(self,"select Input dialog","Interference type?",items,0,False)
+        item, ok = QInputDialog.getItem(self,"select Input dialog","Interference type?",items,0,False)
         if ok and item:
             self.le_color.setText(item)
 
     def getM1(self):
-        text,ok=QInputDialog.getText(self,'Text Input Dialog','M1 central point?')
+        text, ok = QInputDialog.getText(self,'Text Input Dialog','M1 location?')
         if ok:
             self.le_M1.setText(str(text))
         
     def getM2(self):
-        text,ok=QInputDialog.getText(self,'Text Input Dialog','M2 normal vector?')
+        text, ok = QInputDialog.getText(self,'Text Input Dialog','M2 angle?')
         if ok:
             self.le_M2.setText(str(text))
 
     def getSpec(self):
-        items=("White light","Mono. light")
-        item,ok=QInputDialog.getItem(self,"select Input dialog","Source setting?",items,0,False)
-        if ok and item:
-            self.le_spec.setText(item)
+        text, ok = QInputDialog.getText(self,"Text Input Dialog","Wavelength?")
+        if ok:
+            self.le_spec.setText(str(text))
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):

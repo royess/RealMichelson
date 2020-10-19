@@ -7,10 +7,7 @@ from simulation import spec_wavelengths
 
 
 '''
-    This function calculates RGB map from simulation pattern on varied wavelengths
-    NOW ONLY WORKS FOR SPECTRUM THAT IS NOT TOO SPARSE!
-    
-    TODO: make this function compatible with more generlized spectrum! (Yuxuan)
+    This function calculates RGB map from simulation pattern
 '''
 def RGBConverter(pattern):
     wavelength_arr = np.array([entry[1] for entry in pattern]).reshape(100,100,-1)[0,0,:]
